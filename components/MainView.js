@@ -1,9 +1,10 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, setState, Image } from "react-native";
+import { StyleSheet, Text, View, Image } from "react-native";
 import MapView from "react-native-maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Marker } from "react-native-maps";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const MainView = () => {
   const [region, setRegion] = useState({
@@ -12,6 +13,29 @@ const MainView = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+
+  useEffect(() => {
+    if (region === {
+        latitude: 48.815788,
+        longitude: 2.36328,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      })
+      {
+        navigator.geolocation.getCurrentPosition(
+        position => {
+          const initialPosition = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421
+            };
+          setRegion(initialPosition);
+          },
+        ), error => alert(error.message),
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 };
+      }
+    }, []);
 
   return (
     <View style={styles.container}>
@@ -22,11 +46,22 @@ const MainView = () => {
       >
         <Marker
           coordinate={{
+            latitude: region.latitude,
+            longitude: region.longitude,
+          }}
+          title={"Location"}
+        >
+          <Image
+            style={styles.car_marker}
+            source={require("../assets/car.png")}
+          />
+        </Marker>
+        <Marker
+          coordinate={{
             latitude: 48.815788,
             longitude: 2.36328,
           }}
           title={"EPITA KB"}
-          description={"EPITA KB"}
         >
           <Image
             style={styles.light_marker}
@@ -36,9 +71,20 @@ const MainView = () => {
       </MapView>
       <StatusBar style="auto" />
       <View style={styles.infoContainer}>
-        <Text style={styles.infoContainerText}>ETA : 8min</Text>
+        <Text style={styles.infoContainerText}>ETA: 2min</Text>
         <View style={styles.infoContainerActionButton}>
-          <FontAwesome5 name="car" size={35} color="white" />
+          <MaterialIcons
+            name="report"
+            size={40}
+            color="#F87A37"
+            style={{ flex: 1 }}
+          />
+          <FontAwesome5
+            name="location-arrow"
+            size={28}
+            color="#5D5D5D"
+            style={styles.infoContainerActionButtonImage}
+          />
         </View>
       </View>
     </View>
@@ -48,12 +94,6 @@ const MainView = () => {
 export default MainView;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   mapStyle: {
     width: "100%",
     height: "100%",
@@ -75,16 +115,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   infoContainerActionButton: {
-    backgroundColor: "#F87A37",
-    width: 60,
-    height: 60,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 20,
+    display: "flex",
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
   light_marker: {
     width: 20,
     height: 20,
   },
+  car_marker: {
+    width: 15,
+    height: 30,
+  }
 });
