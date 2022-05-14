@@ -1,3 +1,4 @@
+//@ts-check
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import MapView from "react-native-maps";
@@ -7,87 +8,45 @@ import { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import MapViewDirections from "react-native-maps-directions";
-import axios from 'axios';
+import axios from "axios";
 import { AntDesign } from "@expo/vector-icons";
-
-//import * as Permissions from "expo-permissions";
+import { get } from "react-native/Libraries/Utilities/PixelRatio";
 
 const MainView = () => {
   const [location, setLocation] = useState({});
   const [errorMsg, setErrorMsg] = useState(null);
   const [closerTL, setCloserTL] = useState({});
   const [distanceCloserTL, setDistanceCloserTL] = useState(0);
-  const [trafficLights, setTrafficLights] = useState([
-    /*{
-      latitude: 48.8167251535,
-      longitude: 2.36020990149,
-      status: "green",
-    },
-    {
-      latitude: 48.8159264085,
-      longitude: 2.35990399616,
-      status: "green",
-    },
-    {
-      latitude: 48.8160303946,
-      longitude: 2.35986574495,
-      status: "green",
-    },
-    {
-      latitude: 48.8167031265,
-      longitude: 2.36004733496,
-      status: "green",
-    },
-    {
-      latitude: 48.8172621608,
-      longitude: 2.36658056611,
-      status: "green",
-    },
-    {
-      latitude: 48.8173033575,
-      longitude: 2.36674485175,
-      status: "green",
-    },*/
-  ]);
-
+  const [trafficLights, setTrafficLights] = useState([]);
   const [region, setRegion] = useState({
     latitude: 48.815788,
     longitude: 2.36328,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-
-  const ReportBug = () => {
-    console.log(
-      "A bug has been reported at:" +
-        location.latitude +
-        "," +
-        location.longitude
-    );
-  };
-
+  
   const getCloserTrafficLight = () => {
     let distance = 100;
     let closerTrafficLight = {};
     trafficLights.forEach((trafficLight) => {
       let tempDistance =
         Math.sqrt(
-          Math.pow(trafficLight.latitude - location.latitude, 2) + 
-          Math.pow(trafficLight.longitude - location.longitude, 2)
+          Math.pow(trafficLight.latitude - location.latitude, 2) +
+            Math.pow(trafficLight.longitude - location.longitude, 2)
         ) * 100;
       if (tempDistance < distance) {
         distance = tempDistance;
         closerTrafficLight = trafficLight;
       }
     });
-    console.log("my traffics: ", closerTrafficLight.results);
-    setCloserTL(closerTrafficLight.results);
-    let distanceTmp = (distance * 1000).toFixed(1);
-    setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
+    // console.log("my traffics: ", closerTrafficLight.results);
+    // setCloserTL(closerTrafficLight.results);
+    // let distanceTmp = (distance * 1000).toFixed(1);
+    // setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
   };
 
-  const getTL = () => {
-    let trafficLightsTmp = {
+  const getTL = async () => {
+    axios({
       url: "http://10.29.123.96:3000/traffic",
       method: "POST",
       headers: {
@@ -97,67 +56,63 @@ const MainView = () => {
       data: {
         latitude: region.latitude,
         longitude: region.longitude,
+        precision: 0.0005,
       },
-    };
-    axios(trafficLightsTmp)
+    })
       .then(function (response) {
-        console.log(response.data.results);
         setTrafficLights(response.data.results);
       })
       .catch(function (error) {
         console.log(error);
       });
-  }; 
+  };
 
   const _getLocation = async () => {
-    /*let { status } = await Location.requestForegroundPermissionsAsync();
-
-    if (status !== 'granted')
-    {
-      console.log("Premission to access location was denied");
-      setErrorMsg("Permission to access location was denied");
-    }
-    else {*/
-      //const userLocation = Location.getCurrentPositionAsync();
-      Location.watchPositionAsync(
-        {
-          enableHighAccuracy: true,
-          timeInterval: 1000,
-          distanceInterval: 5,
-        },
-        (location) => {
-          setLocation(location.coords);
-          getCloserTrafficLight();
-          getTL();
+    Location.watchPositionAsync(
+      {
+        enableHighAccuracy: true,
+        timeInterval: 1000,
+        distanceInterval: 1,
+      },
+      (location) => {
+        if (location.coords) {
+          setLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
         }
-      );  
-    //}
+      }
+    );
   };
 
   useEffect(() => {
     _getLocation();
   }, []);
 
+  useEffect(() => {
+   
+  }, [trafficLights]);
+
+  useEffect(() => {
+    getTL();
+  }, [region]);
+
+  const ReportBug = () => {
+    console.log("report bug");
+  };
+
   return (
     <View style={styles.container}>
       <MapView
         region={region}
-        //onRegionChangeComplete={setRegion}
+        onRegionChange={(region) =>{
+        }}
+        onRegionChangeComplete={(region) => {
+          setRegion(region);
+        }}
         style={styles.mapStyle}
       >
-        {closerTL && (
-          <MapViewDirections
-            origin={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            destination={{
-              latitude: closerTL.latitude,
-              longitude: closerTL.longitude,
-            }}
-            apikey={"AIzaSyC16-XN7mtGU2YpXVAMRITRVDPH-sdJtY8"}
-          />
-        )}
+        {/* voiture */}
         {location && (
           <Marker
             coordinate={{
@@ -170,14 +125,9 @@ const MainView = () => {
               style={styles.car_marker}
               source={require("../assets/car.png")}
             />
-            {console.log(
-              "Coord -> LAT: " +
-                location.latitude +
-                " | LONG: " +
-                location.longitude
-            )}
           </Marker>
         )}
+        {/* pipita */}
         <Marker
           coordinate={{
             latitude: 48.815788,
@@ -190,7 +140,8 @@ const MainView = () => {
             source={require("../assets/epita.png")}
           />
         </Marker>
-        {trafficLights &&
+        
+        {trafficLights.length > 0 &&
           trafficLights.map((el, index) => (
             <Marker
               key={index}
@@ -201,13 +152,17 @@ const MainView = () => {
               title={"Traffic Light"}
             >
               <Image
+
                 style={styles.light_marker}
                 source={require("../assets/green_traffic_light.png")}
               />
             </Marker>
           ))}
       </MapView>
+
       <StatusBar style="auto" />
+
+      {/* bottom menu */}
       <View style={styles.infoContainer}>
         <View style={styles.nextTrafficLightView}>
           <View style={styles.nextTrafficLightImageView}>
@@ -223,12 +178,12 @@ const MainView = () => {
           </View>
         </View>
         <View style={styles.infoContainerActionButton}>
-          <TouchableOpacity onPress={() => ReportBug()} style={{ flex: 1 }}>
+          <TouchableOpacity onPress={ReportBug} style={{ flex: 1 }}>
             <MaterialIcons
               name="report"
               size={40}
               color="#F87A37"
-              style={{ flex: 1}}
+              style={{ flex: 1 }}
             />
           </TouchableOpacity>
           <View
@@ -338,6 +293,6 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "bold",
     textAlign: "center",
-    color: "#5D5D5D"
+    color: "#5D5D5D",
   },
 });
