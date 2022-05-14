@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import MapView from "react-native-maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Marker } from "react-native-maps";
@@ -11,6 +11,7 @@ import * as Location from "expo-location";
 const MainView = () => {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [trafficLights, setTrafficLights] = useState([]);
 
   const [region, setRegion] = useState({
     latitude: 48.815788,
@@ -19,7 +20,20 @@ const MainView = () => {
     longitudeDelta: 0.0421,
   });
 
+  const ReportBug = () => {
+    console.log("A bug has been reported at:" + location);
+  };
+
   useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setErrorMsg("Permission to access location was denied");
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    })();
     if (region === {
         latitude: 48.815788,
         longitude: 2.36328,
@@ -32,23 +46,14 @@ const MainView = () => {
           const initialPosition = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421
+            latitudeDelta: position.coords.latitudeDelta,
+            longitudeDelta: position.coords.longitudeDelta,
             };
           setRegion(initialPosition);
           },
         ), error => alert(error.message),
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 };
       }
-      (async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setErrorMsg("Permission to access location was denied");
-          return;
-        }
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
-      })();
     }, []);
 
   return (
@@ -60,8 +65,10 @@ const MainView = () => {
       >
         <Marker
           coordinate={{
-            latitude: region.latitude,
-            longitude: region.longitude,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: location.latitudeDelta,
+            longitudeDelta: location.longitudeDelta,
           }}
           title={"Location"}
         >
@@ -87,18 +94,28 @@ const MainView = () => {
       <View style={styles.infoContainer}>
         <Text style={styles.infoContainerText}>ETA: 2min</Text>
         <View style={styles.infoContainerActionButton}>
-          <MaterialIcons
-            name="report"
-            size={40}
-            color="#F87A37"
-            style={{ flex: 1 }}
-          />
-          <FontAwesome5
-            name="location-arrow"
-            size={28}
-            color="#5D5D5D"
-            style={styles.infoContainerActionButtonImage}
-          />
+          <TouchableOpacity
+            onPress={() => ReportBug()}
+          >
+            <MaterialIcons
+              name="report"
+              size={40}
+              color="#F87A37"
+              style={{ flex: 1 }}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setRegion(location);
+            }}
+          >
+            <FontAwesome5
+              name="location-arrow"
+              size={28}
+              color="#5D5D5D"
+              style={styles.infoContainerActionButtonImage}
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
