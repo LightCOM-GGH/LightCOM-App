@@ -12,7 +12,8 @@ import MapViewDirections from "react-native-maps-directions";
 const MainView = () => {
   const [location, setLocation] = useState({});
   const [errorMsg, setErrorMsg] = useState(null);
-  const [closerTL, setCloserTL] = useState((null, null));
+  const [closerTL, setCloserTL] = useState({});
+  const [distanceCloserTL, setDistanceCloserTL] = useState(0);
   const [trafficLights, setTrafficLights] = useState([
     {
       latitude: 48.8167251535,
@@ -55,11 +56,37 @@ const MainView = () => {
 
   const ReportBug = () => {
     console.log(
-      "A bug has been reported at:" + location + "_" +
+      "A bug has been reported at:" +
         location.latitude +
         "," +
         location.longitude
     );
+  };
+
+  const distance = (lat1, lat2, lon1, lon2) => {
+    // The math module contains a function
+    // named toRadians which converts from
+    // degrees to radians.
+    lon1 = (lon1 * Math.PI) / 180;
+    lon2 = (lon2 * Math.PI) / 180;
+    lat1 = (lat1 * Math.PI) / 180;
+    lat2 = (lat2 * Math.PI) / 180;
+
+    // Haversine formula
+    let dlon = lon2 - lon1;
+    let dlat = lat2 - lat1;
+    let a =
+      Math.pow(Math.sin(dlat / 2), 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dlon / 2), 2);
+
+    let c = 2 * Math.asin(Math.sqrt(a));
+
+    // Radius of earth in kilometers. Use 3956
+    // for miles
+    let r = 6371;
+
+    // calculate the result
+    return c * r;
   };
 
   const getCloserTrafficLight = () => {
@@ -78,6 +105,8 @@ const MainView = () => {
     });
     console.log(closerTrafficLight);
     setCloserTL(closerTrafficLight);
+    let distanceTmp = (distance * 1000).toFixed(1);
+    setDistanceCloserTL((distanceTmp == 0 ? 1 : distanceTmp ));
   };
 
   const _getLocation = async () => {
@@ -100,10 +129,9 @@ const MainView = () => {
           setLocation(location.coords);
           getCloserTrafficLight();
         }
-      );
+      );  
     //}
   };
-
   useEffect(() => {
     _getLocation();
   }, []);
@@ -115,14 +143,19 @@ const MainView = () => {
         onRegionChangeComplete={setRegion}
         style={styles.mapStyle}
       >
-        <MapViewDirections
-          origin={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          destination={{ latitude: closerTrafficLight.latitude, longitude: closerTrafficLight.longitude }}
-          apikey={GOOGLE_MAPS_APIKEY}
-        />
+        {closerTL && (
+          <MapViewDirections
+            origin={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }}
+            destination={{
+              latitude: closerTL.latitude,
+              longitude: closerTL.longitude,
+            }}
+            apikey={"AIzaSyC16-XN7mtGU2YpXVAMRITRVDPH-sdJtY8"}
+          />
+        )}
         {location && (
           <Marker
             coordinate={{
@@ -167,14 +200,21 @@ const MainView = () => {
             >
               <Image
                 style={styles.light_marker}
-                source={require("../assets/red_traffic_light.png")}
+                source={require("../assets/green_traffic_light.png")}
               />
             </Marker>
           ))}
       </MapView>
       <StatusBar style="auto" />
       <View style={styles.infoContainer}>
-        <Text style={styles.infoContainerText}>ETA: 2min</Text>
+        <View style={styles.nextTrafficLightView}>
+          <Text style={styles.nextTrafficLightText}>
+            Next traffic light
+          </Text>
+          <Text style={styles.infoContainerText}>
+            Distance : {distanceCloserTL}m
+          </Text>
+        </View>
         <View style={styles.infoContainerActionButton}>
           <TouchableOpacity onPress={() => ReportBug()}>
             <MaterialIcons
@@ -211,24 +251,49 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     position: "absolute",
-    height: "20%",
+    height: "40%",
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 20,
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+  },
+  nextTrafficLightText:{
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#5D5D5D",
+    marginTop: 10,
+  },
+  nextTrafficLightView: {
+    marginLeft: 0,
+    marginRight: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    height: "40%",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "column",
+    alignItems: "center",
+  },
+  nextTrafficLightViewBackgroundColorRed: {
+    backgroundColor: "#FF433A",
+  },
+  nextTrafficLightViewBackgroundColorGreen: {
+    backgroundColor: "#00C069",
   },
   infoContainerText: {
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
+    padding: 20,
   },
   infoContainerActionButton: {
     marginTop: 20,
     display: "flex",
     flex: 1,
+    padding: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
