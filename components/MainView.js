@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import MapViewDirections from "react-native-maps-directions";
+import axios from 'axios';
+import { AntDesign } from "@expo/vector-icons";
+
 //import * as Permissions from "expo-permissions";
 
 const MainView = () => {
@@ -15,7 +18,7 @@ const MainView = () => {
   const [closerTL, setCloserTL] = useState({});
   const [distanceCloserTL, setDistanceCloserTL] = useState(0);
   const [trafficLights, setTrafficLights] = useState([
-    {
+    /*{
       latitude: 48.8167251535,
       longitude: 2.36020990149,
       status: "green",
@@ -44,7 +47,7 @@ const MainView = () => {
       latitude: 48.8173033575,
       longitude: 2.36674485175,
       status: "green",
-    },
+    },*/
   ]);
 
   const [region, setRegion] = useState({
@@ -63,32 +66,6 @@ const MainView = () => {
     );
   };
 
-  const distance = (lat1, lat2, lon1, lon2) => {
-    // The math module contains a function
-    // named toRadians which converts from
-    // degrees to radians.
-    lon1 = (lon1 * Math.PI) / 180;
-    lon2 = (lon2 * Math.PI) / 180;
-    lat1 = (lat1 * Math.PI) / 180;
-    lat2 = (lat2 * Math.PI) / 180;
-
-    // Haversine formula
-    let dlon = lon2 - lon1;
-    let dlat = lat2 - lat1;
-    let a =
-      Math.pow(Math.sin(dlat / 2), 2) +
-      Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dlon / 2), 2);
-
-    let c = 2 * Math.asin(Math.sqrt(a));
-
-    // Radius of earth in kilometers. Use 3956
-    // for miles
-    let r = 6371;
-
-    // calculate the result
-    return c * r;
-  };
-
   const getCloserTrafficLight = () => {
     let distance = 100;
     let closerTrafficLight = {};
@@ -103,11 +80,34 @@ const MainView = () => {
         closerTrafficLight = trafficLight;
       }
     });
-    console.log(closerTrafficLight);
-    setCloserTL(closerTrafficLight);
+    console.log("my traffics: ", closerTrafficLight.results);
+    setCloserTL(closerTrafficLight.results);
     let distanceTmp = (distance * 1000).toFixed(1);
-    setDistanceCloserTL((distanceTmp == 0 ? 1 : distanceTmp ));
+    setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
   };
+
+  const getTL = () => {
+    let trafficLightsTmp = {
+      url: "http://10.29.123.96:3000/traffic",
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json;charset=UTF-8",
+      },
+      data: {
+        latitude: region.latitude,
+        longitude: region.longitude,
+      },
+    };
+    axios(trafficLightsTmp)
+      .then(function (response) {
+        console.log(response.data.results);
+        setTrafficLights(response.data.results);
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+  }; 
 
   const _getLocation = async () => {
     /*let { status } = await Location.requestForegroundPermissionsAsync();
@@ -128,10 +128,12 @@ const MainView = () => {
         (location) => {
           setLocation(location.coords);
           getCloserTrafficLight();
+          getTL();
         }
       );  
     //}
   };
+
   useEffect(() => {
     _getLocation();
   }, []);
@@ -140,7 +142,7 @@ const MainView = () => {
     <View style={styles.container}>
       <MapView
         region={region}
-        onRegionChangeComplete={setRegion}
+        //onRegionChangeComplete={setRegion}
         style={styles.mapStyle}
       >
         {closerTL && (
@@ -208,32 +210,54 @@ const MainView = () => {
       <StatusBar style="auto" />
       <View style={styles.infoContainer}>
         <View style={styles.nextTrafficLightView}>
-          <Text style={styles.nextTrafficLightText}>
-            Next traffic light
-          </Text>
-          <Text style={styles.infoContainerText}>
-            Distance : {distanceCloserTL}m
-          </Text>
+          <View style={styles.nextTrafficLightImageView}>
+            <Image
+              style={styles.nextTrafficLightImage}
+              source={require("../assets/green_traffic_light.png")}
+            />
+          </View>
+          <View style={styles.nextTrafficLightTextView}>
+            <Text style={styles.nextTrafficLightText}>
+              {distanceCloserTL} m
+            </Text>
+          </View>
         </View>
         <View style={styles.infoContainerActionButton}>
-          <TouchableOpacity onPress={() => ReportBug()}>
+          <TouchableOpacity onPress={() => ReportBug()} style={{ flex: 1 }}>
             <MaterialIcons
               name="report"
               size={40}
               color="#F87A37"
-              style={{ flex: 1 }}
+              style={{ flex: 1}}
             />
           </TouchableOpacity>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#00D166",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+              alignItems: "center",
+              maxHeight: 70,
+              maxWidth: 70,
+            }}
+          >
+            <AntDesign name="arrowup" size={70} color="white" />
+          </View>
           <TouchableOpacity
             onPress={() => {
               setRegion(location);
             }}
+            style={{ flex: 1 }}
           >
             <FontAwesome5
               name="location-arrow"
               size={28}
               color="#5D5D5D"
-              style={[styles.infoContainerActionButtonImage, { flex: 1 }]}
+              style={{ flex: 1, alignItems: "center" }}
             />
           </TouchableOpacity>
         </View>
@@ -259,35 +283,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  nextTrafficLightText:{
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#5D5D5D",
-    marginTop: 10,
-  },
-  nextTrafficLightView: {
-    marginLeft: 0,
-    marginRight: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    height: "40%",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "column",
-    alignItems: "center",
-  },
-  nextTrafficLightViewBackgroundColorRed: {
-    backgroundColor: "#FF433A",
-  },
-  nextTrafficLightViewBackgroundColorGreen: {
-    backgroundColor: "#00C069",
-  },
   infoContainerText: {
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
     padding: 20,
+  },
+  nextTrafficLightView: {
+    marginLeft: 5,
+    marginRight: 5,
+    left: 0,
+    right: 0,
+    padding: 20,
+    height: "40%",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
   },
   infoContainerActionButton: {
     marginTop: 20,
@@ -295,7 +306,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     alignItems: "center",
   },
   light_marker: {
@@ -309,5 +320,24 @@ const styles = StyleSheet.create({
   car_marker: {
     width: 30,
     height: 55,
+  },
+  nextTrafficLightImageView: {
+    flex: 1,
+    alignItems: "center",
+  },
+  nextTrafficLightImage: {
+    width: 100,
+    height: 100,
+  },
+  nextTrafficLightTextView: {
+    flex: 1,
+    borderLeftColor: "#5D5D5D",
+    borderLeftWidth: 3,
+  },
+  nextTrafficLightText: {
+    fontSize: 30,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#5D5D5D"
   },
 });
