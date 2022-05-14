@@ -5,8 +5,13 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { Marker } from "react-native-maps";
 import { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+
 
 const MainView = () => {
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
   const [region, setRegion] = useState({
     latitude: 48.815788,
     longitude: 2.36328,
@@ -35,6 +40,15 @@ const MainView = () => {
         ), error => alert(error.message),
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 };
       }
+      (async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          setErrorMsg("Permission to access location was denied");
+          return;
+        }
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location);
+      })();
     }, []);
 
   return (
