@@ -1,31 +1,23 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View , setState, Image} from 'react-native';
+import { StatusBar } from "expo-status-bar";
+import { StyleSheet, Text, View, setState, Image } from "react-native";
 import MapView from "react-native-maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Marker } from "react-native-maps";
-
+import { useState } from "react";
 
 const MainView = () => {
-  const getInitialState = () => {
-    return {
-      region: {
-        latitude: 48.815788,
-        longitude: 2.36328,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      },
-    };
-  };
-
-  const onRegionChange = (region) => {
-    this.setState({ region });
-  };
+  const [region, setRegion] = useState({
+    latitude: 48.815788,
+    longitude: 2.36328,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
   return (
     <View style={styles.container}>
       <MapView
-        region={getInitialState().region}
-        onRegionChange={onRegionChange.region}
+        region={region}
+        onRegionChangeComplete={setRegion}
         style={styles.mapStyle}
       >
         <Marker
@@ -36,7 +28,10 @@ const MainView = () => {
           title={"EPITA KB"}
           description={"EPITA KB"}
         >
-          <Image style={styles.light_marker} source={require('../assets/green_traffic_light.png')} />
+          <Image
+            style={styles.light_marker}
+            source={require("../assets/green_traffic_light.png")}
+          />
         </Marker>
       </MapView>
       <StatusBar style="auto" />
@@ -48,9 +43,9 @@ const MainView = () => {
       </View>
     </View>
   );
-}
+};
 
-export default MainView
+export default MainView;
 
 const styles = StyleSheet.create({
   container: {
@@ -91,5 +86,5 @@ const styles = StyleSheet.create({
   light_marker: {
     width: 20,
     height: 20,
-  }
+  },
 });
