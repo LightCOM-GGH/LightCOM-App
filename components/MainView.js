@@ -1,6 +1,12 @@
 //@ts-check
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+} from "react-native";
 import MapView from "react-native-maps";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Marker } from "react-native-maps";
@@ -10,12 +16,19 @@ import * as Location from "expo-location";
 import MapViewDirections from "react-native-maps-directions";
 import axios from "axios";
 import { AntDesign } from "@expo/vector-icons";
-import { get } from "react-native/Libraries/Utilities/PixelRatio";
+import Toast from "react-native-toast-message";
+import { Gyroscope } from "expo-sensors";
+
 
 const MainView = () => {
   const [location, setLocation] = useState({});
-  const [errorMsg, setErrorMsg] = useState(null);
   const [closerTL, setCloserTL] = useState({});
+  const [data, setData] = useState({
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+  const [subscription, setSubscription] = useState(null);
   const [distanceCloserTL, setDistanceCloserTL] = useState(0);
   const [trafficLights, setTrafficLights] = useState([]);
   const [region, setRegion] = useState({
@@ -24,7 +37,8 @@ const MainView = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  
+  const[deg, setDeg] = useState(0);
+
   const getCloserTrafficLight = () => {
     let distance = 100;
     let closerTrafficLight = {};
@@ -40,10 +54,33 @@ const MainView = () => {
       }
     });
     // console.log("my traffics: ", closerTrafficLight.results);
-    // setCloserTL(closerTrafficLight.results);
-    // let distanceTmp = (distance * 1000).toFixed(1);
-    // setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
+     setCloserTL(closerTrafficLight.results);
+     let distanceTmp = (distance * 1000).toFixed(1);
+     setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
   };
+
+  const _slow = () => {
+    Gyroscope.setUpdateInterval(1000);
+  };
+
+  const _fast = () => {
+    Gyroscope.setUpdateInterval(16);
+  };
+
+  const _subscribe = () => {
+    setSubscription(
+      Gyroscope.addListener((gyroscopeData) => {
+        setData(gyroscopeData);
+      })
+    );
+    Gyroscope.setUpdateInterval(16);
+  };
+
+  const _unsubscribe = () => {
+    subscription && subscription.remove();
+    setSubscription(null);
+  };
+
 
   const getTL = async () => {
     axios({
@@ -60,7 +97,9 @@ const MainView = () => {
       },
     })
       .then(function (response) {
-        setTrafficLights(response.data.results);
+        if (response.data.results) {
+          setTrafficLights(response.data.results);
+          getCloserTrafficLight();}
       })
       .catch(function (error) {
         console.log(error);
@@ -74,11 +113,11 @@ const MainView = () => {
         timeInterval: 1000,
         distanceInterval: 1,
       },
-      (location) => {
-        if (location.coords) {
+      (locationRes) => {
+        if (locationRes.coords) {
           setLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            latitude: locationRes.coords.latitude,
+            longitude: locationRes.coords.longitude,
           });
         }
       }
@@ -87,11 +126,13 @@ const MainView = () => {
 
   useEffect(() => {
     _getLocation();
+    _subscribe();
+    //return () => _unsubscribe();
   }, []);
 
-  useEffect(() => {
-   
-  }, [trafficLights]);
+  const { x, y, z } = data;
+
+  useEffect(() => {}, [trafficLights]);
 
   useEffect(() => {
     getTL();
@@ -99,35 +140,74 @@ const MainView = () => {
 
   const ReportBug = () => {
     console.log("report bug");
+    Toast.show({
+      type: "success",
+      text1: "Your feedback has been sent.",
+      text2: "Thank you! 👋",
+    });
   };
+
+  /*const getDirections = () => {
+    if (
+      lastLocation &&
+      abs(lastLocation.latitude - location.latitude) < 0.0005 &&
+      abs(lastLocation.longitude - location.longitude) < 0.0005
+    ) {
+      console.log("Fetching directions");
+      getCloserTrafficLight();
+      return (
+        <MapViewDirections
+          origin={{
+            latitude: closerTrafficLight.latitude,
+            longitude: closerTrafficLight.longitude,
+          }}
+          destination={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+          }}
+          apikey={"AIzaSyC16-XN7mtGU2YpXVAMRITRVDPH-sdJtY8"}
+        />
+      );
+    }
+  };*/
 
   return (
     <View style={styles.container}>
+      <View style={styles.searchAddressView}>
+      </View>
       <MapView
         region={region}
-        onRegionChange={(region) =>{
-        }}
+        onRegionChange={(region) => {}}
         onRegionChangeComplete={(region) => {
           setRegion(region);
         }}
         style={styles.mapStyle}
+        //showsUserLocation={true}
+        userLocationUpdateInterval={1000}
+        showsScale={true}
+        showsTraffic={true}
+        loadingEnabled={true}
+        userLocationCalloutEnabled={true}
       >
-        {/* voiture */}
+        {/*getDirections()*/}
+        {/* CAR LOCATION */}
         {location && (
           <Marker
             coordinate={{
               latitude: location.latitude,
               longitude: location.longitude,
+              longitudeDelta: 0.0922,
+              latitudeDelta: 0.0421,
             }}
             title={"Location"}
           >
             <Image
-              style={styles.car_marker}
+              style={[styles.car_marker, {transform: [{ rotate: deg+'deg'}]}]}
               source={require("../assets/car.png")}
             />
           </Marker>
         )}
-        {/* pipita */}
+        {/* EPITA */}
         <Marker
           coordinate={{
             latitude: 48.815788,
@@ -140,7 +220,7 @@ const MainView = () => {
             source={require("../assets/epita.png")}
           />
         </Marker>
-        
+
         {trafficLights.length > 0 &&
           trafficLights.map((el, index) => (
             <Marker
@@ -151,11 +231,24 @@ const MainView = () => {
               }}
               title={"Traffic Light"}
             >
-              <Image
-
-                style={styles.light_marker}
-                source={require("../assets/green_traffic_light.png")}
-              />
+              {el.status === "green" && (
+                <Image
+                  style={styles.light_marker}
+                  source={require("../assets/green_traffic_light.png")}
+                />
+              )}
+              {el.status === "red" && (
+                <Image
+                  style={styles.light_marker}
+                  source={require("../assets/red_traffic_light.png")}
+                />
+              )}
+              {el.status === "unknown" && (
+                <Image
+                  style={styles.light_marker}
+                  source={require("../assets/grey_traffic_light.png")}
+                />
+              )}
             </Marker>
           ))}
       </MapView>
@@ -179,16 +272,12 @@ const MainView = () => {
         </View>
         <View style={styles.infoContainerActionButton}>
           <TouchableOpacity onPress={ReportBug} style={{ flex: 1 }}>
-            <MaterialIcons
-              name="report"
-              size={40}
-              color="#F87A37"
-              style={{ flex: 1 }}
-            />
+            <MaterialIcons name="report" size={55} color="#F87A37" />
           </TouchableOpacity>
           <View
             style={{
               flex: 1,
+              margin: "auto",
               backgroundColor: "#00D166",
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
@@ -198,9 +287,17 @@ const MainView = () => {
               alignItems: "center",
               maxHeight: 70,
               maxWidth: 70,
+              borderRadius: 20,
             }}
           >
-            <AntDesign name="arrowup" size={70} color="white" />
+            <AntDesign
+              name="arrowup"
+              size={70}
+              color="white"
+              style={{ margin: "auto" }}
+            />
+            {/*<AntDesign name="arrowright" size={24} color="black" />
+            <AntDesign name="arrowleft" size={24} color="black" />*/}
           </View>
           <TouchableOpacity
             onPress={() => {
@@ -210,9 +307,9 @@ const MainView = () => {
           >
             <FontAwesome5
               name="location-arrow"
-              size={28}
+              size={35}
               color="#5D5D5D"
-              style={{ flex: 1, alignItems: "center" }}
+              style={styles.locationIcon}
             />
           </TouchableOpacity>
         </View>
@@ -224,9 +321,15 @@ const MainView = () => {
 export default MainView;
 
 const styles = StyleSheet.create({
+  container: {
+    position: "relative",
+  },
   mapStyle: {
     width: "100%",
     height: "100%",
+    top: 0,
+    left: 0,
+    zIndex: 0,
   },
   infoContainer: {
     position: "absolute",
@@ -258,7 +361,6 @@ const styles = StyleSheet.create({
   infoContainerActionButton: {
     marginTop: 20,
     display: "flex",
-    flex: 1,
     padding: 20,
     flexDirection: "row",
     justifyContent: "space-around",
@@ -294,5 +396,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     color: "#5D5D5D",
+  },
+  locationIcon: {
+    marginLeft: 90,
   },
 });
