@@ -23,12 +23,6 @@ import { Gyroscope } from "expo-sensors";
 const MainView = () => {
   const [location, setLocation] = useState({});
   const [closerTL, setCloserTL] = useState({});
-  const [data, setData] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  });
-  const [subscription, setSubscription] = useState(null);
   const [distanceCloserTL, setDistanceCloserTL] = useState(0);
   const [trafficLights, setTrafficLights] = useState([]);
   const [region, setRegion] = useState({
@@ -37,7 +31,6 @@ const MainView = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  const[deg, setDeg] = useState(0);
 
   const getCloserTrafficLight = () => {
     let distance = 100;
@@ -58,29 +51,6 @@ const MainView = () => {
      let distanceTmp = (distance * 1000).toFixed(1);
      setDistanceCloserTL(trafficLights.length === 0 ? 0 : distanceTmp);
   };
-
-  const _slow = () => {
-    Gyroscope.setUpdateInterval(1000);
-  };
-
-  const _fast = () => {
-    Gyroscope.setUpdateInterval(16);
-  };
-
-  const _subscribe = () => {
-    setSubscription(
-      Gyroscope.addListener((gyroscopeData) => {
-        setData(gyroscopeData);
-      })
-    );
-    Gyroscope.setUpdateInterval(16);
-  };
-
-  const _unsubscribe = () => {
-    subscription && subscription.remove();
-    setSubscription(null);
-  };
-
 
   const getTL = async () => {
     axios({
@@ -126,11 +96,8 @@ const MainView = () => {
 
   useEffect(() => {
     _getLocation();
-    _subscribe();
-    //return () => _unsubscribe();
   }, []);
 
-  const { x, y, z } = data;
 
   useEffect(() => {}, [trafficLights]);
 
@@ -202,7 +169,7 @@ const MainView = () => {
             title={"Location"}
           >
             <Image
-              style={[styles.car_marker, {transform: [{ rotate: deg+'deg'}]}]}
+              style={styles.car_marker}
               source={require("../assets/car.png")}
             />
           </Marker>
