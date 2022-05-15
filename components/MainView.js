@@ -63,7 +63,7 @@ const MainView = () => {
       data: {
         latitude: region.latitude,
         longitude: region.longitude,
-        precision: 0.0005,
+        precision: 0.002,
       },
     })
       .then(function (response) {
