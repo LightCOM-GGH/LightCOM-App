@@ -132,7 +132,7 @@ const MainView = () => {
             latitude: location.latitude,
             longitude: location.longitude,
           }}
-          apikey={"AIzaSyC16-XN7mtGU2YpXVAMRITRVDPH-sdJtY8"}
+          apikey={"ADD_GOOGLE_API_KEY"}
         />
       );
     }
